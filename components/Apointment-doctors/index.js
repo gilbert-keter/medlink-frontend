@@ -99,6 +99,7 @@ function AppointmentDoctors({ doctor, selectedAppointment, setSelectedAppointmen
         <AppointmentModal
           onClose={() => setMakeBooking(false)}
           appointmentDetails={selectedAppointment}
+          doctorImage={doctor.image}
         />
       )}
     </div>

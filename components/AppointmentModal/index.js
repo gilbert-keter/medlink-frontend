@@ -1,13 +1,16 @@
 import React, { useState } from "react";
 import { Button, Checkbox, Modal, Tag, TextArea } from "@carbon/react";
-import ReactDOM from "react-dom";
+import Swal from "sweetalert2";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css"; 
 import "./styles.scss";
 
-const AppointmentModal = ({ onClose, appointmentDetails }) => {
-  const [openFirstModal, setOpenFirstModal] = useState(true); 
-  const [openProblemModal, setOpenProblemModal] = useState(false); 
-  const [openPaymentModal, setOpenPaymentModal] = useState(false); 
+const AppointmentModal = ({ onClose, appointmentDetails, doctorImage }) => {
+  const [openFirstModal, setOpenFirstModal] = useState(true);
+  const [openProblemModal, setOpenProblemModal] = useState(false);
+  const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
+  const [problemDescription, setProblemDescription] = useState(""); // Track the problem description
 
   const [selectedPeriod, setSelectedPeriod] = useState("Morning");
   const [selectedTime, setSelectedTime] = useState("");
@@ -54,39 +57,103 @@ const AppointmentModal = ({ onClose, appointmentDetails }) => {
     setSelectedPeriod(period);
   };
 
-  const handleNextButtonClick = () => {
-    setOpenFirstModal(false); 
-    setOpenProblemModal(true); 
+  const convertTo24HourFormat = (timeStr) => {
+    const [time, period] = timeStr.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+
+    if (period === "pm" && hours !== 12) {
+      hours += 12;
+    } else if (period === "am" && hours === 12) {
+      hours = 0;
+    }
+
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}`;
   };
 
-  const handleBackToBookingClick = () => {
-    setOpenFirstModal(true); 
-    setOpenProblemModal(false); 
+  const handleNextButtonClick = async () => {
+    setOpenFirstModal(false);
+    setOpenProblemModal(true);
   };
 
-  const handleProblemSubmit = () => {
-    setOpenProblemModal(false); 
-    setOpenPaymentModal(true); 
+  const handleProblemSubmit = async () => {
+    setOpenProblemModal(false);
+    setOpenPaymentModal(true);
   };
 
-  const handleBackToProblemClick = () => {
-    setOpenProblemModal(true); 
-    setOpenPaymentModal(false); 
-  };
+  const handleFinalModalClose = async () => {
+    setOpenConfirmationModal(false);
+    const formattedTime = convertTo24HourFormat(selectedTime);
+    const formattedDate = new Date(appointmentDetails.date)
+      .toISOString()
+      .split("T")[0];
 
-  const handlePaymentSubmit = () => {
-    console.log("Payment processed successfully");
-    setOpenPaymentModal(false); 
-    setOpenConfirmationModal(true); 
-  };
+    const appointmentData = {
+      doctorName: appointmentDetails.doctorName,
+      speciality: appointmentDetails.speciality,
+      date: formattedDate,
+      time: formattedTime,
+      period: selectedPeriod,
+      consultationType: selectedConsultationType,
+      problemDescription: problemDescription, // Send problem description
+      patientName: "John Doe", // Example
+      patientEmail: "john.doe@example.com", // Example
+      doctor_image: doctorImage || ''
+    };
+    Swal.fire({
+      title: "Booking Appointment",
+      text: "Please wait as we book you an appointment...",
+      imageUrl: "/logov2.svg",
+      imageWidth: 70,
+      imageHeight: 70,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: async () => {
+        try {
+          const response = await fetch(
+            "http://127.0.0.1:8000/bookings/book-appointment/",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(appointmentData),
+            }
+          );
 
-  const handleConfirmationClose = () => {
-    setOpenConfirmationModal(false); 
-    onClose(); 
+          const result = await response.json();
+
+          if (result.status === "success") {
+            Swal.close();
+            Swal.fire({
+              title: "Appointments Booking",
+              text: "Your appointment has been booked successfully!",
+              imageUrl: "/logov2.svg",
+              imageWidth: 70,
+              imageHeight: 70,
+              allowOutsideClick: false,
+              allowEscapeKey: false,
+              showConfirmButton: true,
+            });
+            toast.success(result.message);
+          } else {
+            toast.error(result.message);
+          }
+        } catch (error) {
+          toast.error(
+            `An error occurred. Please try again later. Error: ${error.message}`
+          );
+        }
+      },
+    });
+    Swal.close();
   };
 
   return (
     <>
+      <ToastContainer />
       <Modal
         open={openFirstModal}
         modalHeading={`Booking for ${appointmentDetails.doctorName}`}
@@ -94,7 +161,9 @@ const AppointmentModal = ({ onClose, appointmentDetails }) => {
         primaryButtonText="Next"
         secondaryButtonText="Cancel"
         onRequestClose={onClose}
-        primaryButtonDisabled={!selectedPeriod || !selectedTime || !selectedConsultationType}
+        primaryButtonDisabled={
+          !selectedPeriod || !selectedTime || !selectedConsultationType
+        }
         onRequestSubmit={handleNextButtonClick}
       >
         <p style={{ marginBottom: "1rem" }}>
@@ -135,7 +204,9 @@ const AppointmentModal = ({ onClose, appointmentDetails }) => {
             {timeSlots.map((time, index) => (
               <Tag
                 key={index}
-                className={`time-slot ${selectedTime === time ? "selected" : ""}`}
+                className={`time-slot ${
+                  selectedTime === time ? "selected" : ""
+                }`}
                 type="cool-gray"
                 onClick={() => setSelectedTime(time)}
               >
@@ -172,6 +243,8 @@ const AppointmentModal = ({ onClose, appointmentDetails }) => {
           id="problemDescription"
           labelText="Describe your problem:"
           placeholder="Enter your problem description here"
+          value={problemDescription}
+          onChange={(e) => setProblemDescription(e.target.value)}
         />
       </Modal>
 
@@ -181,24 +254,29 @@ const AppointmentModal = ({ onClose, appointmentDetails }) => {
         primaryButtonText="Pay Now"
         secondaryButtonText="Previous"
         onRequestClose={() => setOpenPaymentModal(false)}
-        onRequestSubmit={handlePaymentSubmit}
+        onRequestSubmit={() => {
+          setOpenPaymentModal(false);
+          setOpenConfirmationModal(true);
+        }}
       >
         <p>Placeholder for PayPal integration.</p>
       </Modal>
 
       <Modal
         open={openConfirmationModal}
-        modalHeading="Appointment Booked Successfully"
-        secondaryButtonText="Go to dashboard"
-        primaryButtonText="View Calender"
-        onRequestClose={handleConfirmationClose}
+        modalHeading={`Confirm Booking of appointment with ${appointmentDetails.doctorName}`}
+        secondaryButtonText="Return"
+        primaryButtonText="Confirm"
+        onRequestClose={() => setOpenConfirmationModal(false)}
+        onRequestSubmit={handleFinalModalClose}
       >
         <div className="success-booking">
-          <img src="../../doctor.jpg" alt="doc"/>
+          <img src={doctorImage} alt="doc" />
         </div>
         <p>
           Your appointment with Dr. {appointmentDetails.doctorName} on{" "}
-          {appointmentDetails.date} at {selectedTime} has been successfully booked.
+          {appointmentDetails.date} at {selectedTime} will now be booked. Click
+          confirm!
         </p>
       </Modal>
     </>

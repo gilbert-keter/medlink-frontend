@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./styles.scss";
 import BackButton from "../../../../components/Button/back";
 import TitlePanel from "../../../../components/TitlePanel";
@@ -11,8 +11,6 @@ import {
   LogoTwitter,
   PhoneVoiceFilled,
 } from "@carbon/icons-react";
-import { redirect } from "next/dist/server/api-utils";
-import Conference from "@/app/home/conferencing";
 
 const Doctor = ({
   imageSrc,
@@ -23,55 +21,60 @@ const Doctor = ({
   twitterLink,
   speciality,
 }) => {
-  const handleCalls = ()=>{
-    localStorage.setItem('selectedItem', "conferencing");
+  const handleCalls = () => {
+    localStorage.setItem("selectedItem", "conferencing");
     const timeout = 2000;
     setTimeout(() => {
       window.location.href = "../../index.js";
-    }, timeout);  }
+    }, timeout);
+  };
 
   return (
- 
-  <div className="doctor-tile">
-    <div className="doctor-container">
-      <div className="doctors-image">
-        <img className="image" src={imageSrc} alt="doctor image" />
-      </div>
-     <div className="group-flex">
-     <div className="doctors-info">
-        <Heading style={{ fontWeight: "bold" }}>{name}</Heading>
-        <p>
-          <span style={{ display: "inline-block", marginLeft: "20px" }}>
-            {speciality}
-          </span>
-        </p>
-        <p>
-          <span style={{ display: "inline-block", marginLeft: "30px" }}>
-            {phone}
-          </span>
-        </p>
-      </div>
-      <div className="call-btn">
-        <div className="call">
-          <PhoneVoiceFilled onClick={handleCalls} className="call-icon" size={64} />
+    <div className="doctor-tile">
+      <div className="doctor-container">
+        <div className="doctors-image">
+          <img className="image" src={imageSrc} alt="doctor image" />
         </div>
-      
-        <div className="doctor-social-links">
-          <a href={twitterLink}>
-            <LogoTwitter size={32} />
-          </a>
-          <a href={instagramLink}>
-            <LogoInstagram size={32} />
-          </a>
-          <a href={discordLink}>
-            <LogoDiscord size={32} />
-          </a>
+        <div className="group-flex">
+          <div className="doctors-info">
+            <Heading style={{ fontWeight: "bold" }}>{name}</Heading>
+            <p>
+              <span style={{ display: "inline-block", marginLeft: "20px" }}>
+                {speciality}
+              </span>
+            </p>
+            <p>
+              <span style={{ display: "inline-block", marginLeft: "30px" }}>
+                {phone}
+              </span>
+            </p>
+          </div>
+          <div className="call-btn">
+            <div className="call">
+              <PhoneVoiceFilled
+                onClick={handleCalls}
+                className="call-icon"
+                size={64}
+              />
+            </div>
+
+            <div className="doctor-social-links">
+              <a href={twitterLink}>
+                <LogoTwitter size={32} />
+              </a>
+              <a href={instagramLink}>
+                <LogoInstagram size={32} />
+              </a>
+              <a href={discordLink}>
+                <LogoDiscord size={32} />
+              </a>
+            </div>
+          </div>
         </div>
       </div>
-     </div>
     </div>
-  </div>
-  )};
+  );
+};
 
 function NextAppointments({ handleBackToDashboard }) {
   const doctors = [
@@ -174,6 +177,7 @@ function NextAppointments({ handleBackToDashboard }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentDoctorPage, setCurrentDoctorPage] = useState(1);
   const [currentAppointmentPage, setCurrentAppointmentPage] = useState(1);
+  const [appointments_history, setAppointments_history] = useState([]);
   const itemsPerPage = 3;
 
   const handleDoctorPageChange = ({ page }) => {
@@ -205,47 +209,24 @@ function NextAppointments({ handleBackToDashboard }) {
     indexOfFirstAppointment,
     indexOfLastAppointment
   );
-  const appointments_history = [
-    {
-      id: 1,
-      image: "../../../doctors/doc-1.jpeg",
-      name: "Ian",
-      test: "Blood test",
-      date: "29th August 2023",
-    },
-    {
-      id: 2,
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      const email = "john.doe@example.com";
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:8000/bookings/fetch-appointments/${encodeURIComponent(
+            email
+          )}/`
+        );
+        const data = await response.json();
+        setAppointments_history(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
-      image: "../../../doctors/doc-2.jpeg",
-      name: "Nancy",
-      test: "Urine test",
-      date: "21th August 2023",
-    },
-    {
-      id: 3,
-
-      image: "../../../doctors/doc-3.jpeg",
-      name: "Keter",
-      test: "Semen test",
-      date: "29th May 2023",
-    },
-    {
-      id: 4,
-
-      image: "../../../doctors/doc-4.jpeg",
-      name: "George",
-      test: "Blood test",
-      date: "12th July 2023",
-    },
-    {
-      id: 5,
-
-      image: "../../../doctors/doc-5.jpeg",
-      name: "Jeniffer",
-      test: "Blood test",
-      date: "10th August 2025",
-    },
-  ];
+    fetchAppointments();
+  }, []);
   function BookAppointment() {
     localStorage.setItem("selectedItem", "Appointments");
 
@@ -254,7 +235,6 @@ function NextAppointments({ handleBackToDashboard }) {
       window.location.href = "http://localhost:3000/home";
     }, timeout);
   }
-
   return (
     <div className="appointments-hub">
       <TitlePanel>
@@ -308,15 +288,22 @@ function NextAppointments({ handleBackToDashboard }) {
       <div className="myAppointments-hist">
         <Heading className="nextApp-title">My Appointments</Heading>
         <section className="next-appointments">
-          {appointments_history.map((appointment) => (
-            <NextAppCard
-              key={appointment.id}
-              name={appointment.name}
-              test={appointment.test}
-              date={appointment.date}
-              docImage={appointment.image}
-            />
-          ))}
+          {appointments_history.length > 0 ? (
+            appointments_history.map((appointment) => (
+              <NextAppCard
+                key={appointment.id}
+                name={appointment.doctor_name}
+                test={appointment.problem_description}
+                date={appointment.date}
+                docImage={appointment.doctor_image}
+                time={appointment.time}
+                email={appointment.patient_email}
+              />
+            ))
+          ) : (
+            <Heading> You have not booked an appointment yet.</Heading>
+          )}
+
           <div className="new-app">
             <Button
               renderIcon={Calendar}

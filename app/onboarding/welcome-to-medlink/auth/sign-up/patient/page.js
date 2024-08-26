@@ -4,13 +4,13 @@ import Patient from "./index";
 import "./styles.scss";
 // import WithAuthRedirect from "../../../../internals/sign-in/withAuthRedirect";
 function Page() {
-  const [hasReloaded, setReloaded] = useState(false);
-  useEffect(() => {
-    if (!hasReloaded) {
-      setReloaded(true);
-      window.location.reload();
-    }
-  }, [hasReloaded]);
+  // const [hasReloaded, setReloaded] = useState(false);
+  // useEffect(() => {
+  //   if (!hasReloaded) {
+  //     setReloaded(true);
+  //     window.location.reload();
+  //   }
+  // }, [hasReloaded]);
   return (
     <div>
       {/* <WithAuthRedirect> */}

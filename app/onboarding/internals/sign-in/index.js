@@ -98,6 +98,8 @@ function SignInForm() {
                             toast.success("2FA code sent. Redirecting to 2FA verification page...");
                             redirect2FA(email);
                         }
+                        toast.success("Login Success, Redirecting to Home page...");
+
                         sessionStorage.setItem('sessionId', response.data.session_id);
                         sessionStorage.setItem('userId', response.data.user_id);
                         sessionStorage.setItem('userEmail', response.data.email);
